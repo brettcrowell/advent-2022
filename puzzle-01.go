@@ -8,6 +8,38 @@ import (
 	"strconv"
 )
 
+func sum(rations []int) int {
+	total := 0
+
+	for _, calories := range rations {
+		total += calories
+	}
+
+	return total
+}
+
+func tally(logs [][]int) []int {
+	sums := make([]int, len(logs))
+
+	for _, log := range logs {
+		sums = append(sums, sum(log))
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(sums)))
+
+	return sums
+}
+
+func top(tallies []int, n int) int {
+	partialSum := 0
+
+	for i := 0; i < 3; i++ {
+		partialSum += tallies[i]
+	}
+
+	return partialSum
+}
+
 func main() {
 	input, err := os.Open(os.Args[1])
 
@@ -18,10 +50,7 @@ func main() {
 	defer input.Close()
 
 	scanner := bufio.NewScanner(input)
-	rations := make(map[int]int)
-
-	curElf := 0
-	rations[curElf] = 0
+	logs := [][]int{{}}
 
 	for scanner.Scan() {
 		if scanner.Text() != "" {
@@ -31,20 +60,16 @@ func main() {
 				panic(err)
 			}
 
-			rations[curElf] = rations[curElf] + calories
+			lastElf := len(logs) - 1
+			logs[lastElf] = append(logs[lastElf], calories)
 		} else {
-			curElf++
+			logs = append(logs, make([]int, 0))
 		}
 	}
 
-	calories := make([]int, len(rations))
+	tallies := tally(logs)
 
-	for elf, elfCalories := range rations {
-		calories[elf] = elfCalories
-	}
+	fmt.Println(tallies[0])
+	fmt.Println(top(tallies, 3))
 
-	sort.Ints(calories)
-
-	length := len(calories)
-	fmt.Println(calories[length-1] + calories[length-2] + calories[length-3])
 }
