@@ -34,13 +34,31 @@ func main() {
 		"scissers": {"rock": 0, "paper": 6, "scissers": 3},
 	}
 
+	expectedValue := map[int]map[string]string{}
+	for _, desired := range [3]int{0, 3, 6} {
+		expectedValue[desired] = map[string]string{}
+		for ours, scores := range scoring {
+			for theirs, score := range scores {
+				if desired == score {
+					expectedValue[desired][theirs] = ours
+					break
+				}
+			}
+		}
+	}
+
+	fmt.Println(expectedValue)
+
 	parse := map[string]string{
 		"A": "rock",
 		"B": "paper",
 		"C": "scissers",
-		"X": "rock",
-		"Y": "paper",
-		"Z": "scissers",
+	}
+
+	outcomes := map[string]int{
+		"X": 0,
+		"Y": 3,
+		"Z": 6,
 	}
 
 	input, err := os.Open(os.Args[1])
@@ -56,8 +74,10 @@ func main() {
 
 	for scanner.Scan() {
 		args := strings.Split(scanner.Text(), " ")
+
 		theirs := parse[args[0]]
-		ours := parse[args[1]]
+		outcome := outcomes[args[1]]
+		ours := expectedValue[outcome][theirs]
 
 		roundScore := baseline[ours] + scoring[ours][theirs]
 		total += roundScore
