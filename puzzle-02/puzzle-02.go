@@ -34,20 +34,15 @@ func main() {
 		"scissers": {"rock": 0, "paper": 6, "scissers": 3},
 	}
 
-	expectedValue := map[int]map[string]string{}
-	for _, desired := range [3]int{0, 3, 6} {
-		expectedValue[desired] = map[string]string{}
-		for ours, scores := range scoring {
-			for theirs, score := range scores {
-				if desired == score {
-					expectedValue[desired][theirs] = ours
-					break
-				}
+	expectedValues := map[int]map[string]string{}
+	for ours, scores := range scoring {
+		for theirs, score := range scores {
+			if expectedValues[score] == nil {
+				expectedValues[score] = map[string]string{}
 			}
+			expectedValues[score][theirs] = ours
 		}
 	}
-
-	fmt.Println(expectedValue)
 
 	parse := map[string]string{
 		"A": "rock",
@@ -77,7 +72,7 @@ func main() {
 
 		theirs := parse[args[0]]
 		outcome := outcomes[args[1]]
-		ours := expectedValue[outcome][theirs]
+		ours := expectedValues[outcome][theirs]
 
 		roundScore := baseline[ours] + scoring[ours][theirs]
 		total += roundScore
