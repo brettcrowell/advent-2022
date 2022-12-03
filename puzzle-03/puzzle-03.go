@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func getCommonItems(first []string, second []string) []string {
+func GetCommonItems(first []string, second []string) []string {
 	set := map[string]bool{}
 
 	for _, firstItem := range first {
@@ -52,8 +52,8 @@ func main() {
 		contents[row%3] = content
 
 		if row%3 == 0 {
-			firstCommon := getCommonItems(contents[0], contents[1])
-			secondCommon := getCommonItems(firstCommon, contents[2])
+			firstCommon := GetCommonItems(contents[0], contents[1])
+			secondCommon := GetCommonItems(firstCommon, contents[2])
 
 			sum += itemValues[secondCommon[0]]
 		}
