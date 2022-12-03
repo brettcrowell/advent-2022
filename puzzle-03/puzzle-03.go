@@ -7,6 +7,20 @@ import (
 	"strings"
 )
 
+func getCommonItems(first []string, second []string) []string {
+	common := []string{}
+
+	for _, firstItem := range first {
+		for _, secondItem := range second {
+			if firstItem == secondItem {
+				common = append(common, firstItem)
+			}
+		}
+	}
+
+	return common
+}
+
 func main() {
 	items := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	itemValues := map[string]int{}
@@ -24,24 +38,22 @@ func main() {
 	defer input.Close()
 	scanner := bufio.NewScanner(input)
 
+	row := 1
+	contents := [3][]string{}
 	sum := 0
 
 	for scanner.Scan() {
-		contents := strings.Split(scanner.Text(), "")
-		half := len(contents) / 2
+		content := strings.Split(scanner.Text(), "")
+		contents[row%3] = content
+		if row%3 == 0 {
+			firstCommon := getCommonItems(contents[0], contents[1])
+			secondCommon := getCommonItems(firstCommon, contents[2])
 
-		first := contents[0:half]
-		second := contents[half:]
+			sum += itemValues[secondCommon[0]]
 
-	outer:
-		for _, firstItem := range first {
-			for _, secondItem := range second {
-				if firstItem == secondItem {
-					sum += itemValues[firstItem]
-					break outer
-				}
-			}
+			contents = [3][]string{}
 		}
+		row++
 	}
 
 	fmt.Println(sum)
