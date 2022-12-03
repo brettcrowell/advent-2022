@@ -8,14 +8,19 @@ import (
 )
 
 func getCommonItems(first []string, second []string) []string {
-	common := []string{}
+	set := map[string]bool{}
 
 	for _, firstItem := range first {
 		for _, secondItem := range second {
 			if firstItem == secondItem {
-				common = append(common, firstItem)
+				set[firstItem] = true
 			}
 		}
+	}
+
+	common := []string{}
+	for key := range set {
+		common = append(common, key)
 	}
 
 	return common
@@ -45,14 +50,14 @@ func main() {
 	for scanner.Scan() {
 		content := strings.Split(scanner.Text(), "")
 		contents[row%3] = content
+
 		if row%3 == 0 {
 			firstCommon := getCommonItems(contents[0], contents[1])
 			secondCommon := getCommonItems(firstCommon, contents[2])
 
 			sum += itemValues[secondCommon[0]]
-
-			contents = [3][]string{}
 		}
+
 		row++
 	}
 
