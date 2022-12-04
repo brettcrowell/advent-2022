@@ -46,7 +46,7 @@ func main() {
 	defer input.Close()
 	scanner := bufio.NewScanner(input)
 
-	contained := 0
+	overlaps := 0
 
 	for scanner.Scan() {
 		ranges := parse(scanner.Text())
@@ -56,14 +56,22 @@ func main() {
 		lowB := ranges[1][0]
 		highB := ranges[1][1]
 
-		aContainsB := lowA <= lowB && highA >= highB
-		bContainsA := lowB <= lowA && highB >= highA
+		var lowOverlapsLow, highOverlapsHigh, highOverlapsLow bool
 
-		if aContainsB || bContainsA {
-			contained++
+		if lowA > lowB {
+			lowOverlapsLow = lowB >= lowA
+			highOverlapsHigh = highB >= highA
+			highOverlapsLow = highB >= lowA
+		} else {
+			lowOverlapsLow = lowA >= lowB
+			highOverlapsHigh = highA >= highB
+			highOverlapsLow = highA >= lowB
 		}
 
+		if lowOverlapsLow || highOverlapsHigh || highOverlapsLow {
+			overlaps++
+		}
 	}
 
-	fmt.Println(contained)
+	fmt.Println(overlaps)
 }
