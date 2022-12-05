@@ -59,11 +59,11 @@ func main() {
 		from, _ := strconv.Atoi(moves[1])
 		to, _ := strconv.Atoi(moves[2])
 
-		for i := 0; i < num; i++ {
-			crate := stacks[from][0]
-			stacks[from] = stacks[from][1:]
-			stacks[to] = append([]string{crate}, stacks[to]...)
-		}
+		moving := make([]string, num)
+		copy(moving, stacks[from][0:num])
+
+		stacks[from] = stacks[from][num:]
+		stacks[to] = append(moving, stacks[to]...)
 	}
 
 	answer := ""
