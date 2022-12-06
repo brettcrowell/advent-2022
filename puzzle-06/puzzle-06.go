@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func all_different(chars []string) bool {
+func all_different(chars ...string) bool {
 	seen := map[string]bool{}
 
 	for _, char := range chars {
@@ -39,7 +39,7 @@ func main() {
 		trailing = append(trailing, current)
 
 		if len(trailing) == marker_len {
-			if all_different(trailing) {
+			if all_different(trailing...) {
 				fmt.Println(iterations)
 				break
 			} else {
