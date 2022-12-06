@@ -30,6 +30,7 @@ func main() {
 	scanner := bufio.NewScanner(input)
 	scanner.Split(bufio.ScanRunes)
 
+	marker_len := 14
 	iterations := 1
 	trailing := []string{}
 
@@ -37,7 +38,7 @@ func main() {
 		current := scanner.Text()
 		trailing = append(trailing, current)
 
-		if len(trailing) == 4 {
+		if len(trailing) == marker_len {
 			if all_different(trailing) {
 				fmt.Println(iterations)
 				break
