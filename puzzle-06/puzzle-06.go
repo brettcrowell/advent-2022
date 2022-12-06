@@ -19,6 +19,27 @@ func allDifferent(chars ...string) bool {
 	return true
 }
 
+func createIngester(marker_len int) func(string) (bool, int) {
+	iterations := 0
+	window := []string{}
+
+	return func(char string) (bool, int) {
+		iterations++
+
+		window = append(window, char)
+
+		if len(window) == marker_len {
+			if allDifferent(window...) {
+				return true, iterations
+			} else {
+				window = window[1:]
+			}
+		}
+
+		return false, iterations
+	}
+}
+
 func main() {
 	input, err := os.Open(os.Args[1])
 
@@ -30,24 +51,15 @@ func main() {
 	scanner := bufio.NewScanner(input)
 	scanner.Split(bufio.ScanRunes)
 
-	marker_len := 14
-	iterations := 1
-	trailing := []string{}
+	ingest := createIngester(14)
 
 	for scanner.Scan() {
-		current := scanner.Text()
-		trailing = append(trailing, current)
+		match, iterations := ingest(scanner.Text())
 
-		if len(trailing) == marker_len {
-			if allDifferent(trailing...) {
-				fmt.Println(iterations)
-				break
-			} else {
-				trailing = trailing[1:]
-			}
+		if match {
+			fmt.Println(iterations)
+			break
 		}
-
-		iterations++
 	}
 
 }
