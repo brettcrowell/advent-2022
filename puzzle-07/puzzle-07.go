@@ -82,6 +82,34 @@ func getDirSizes(sizes *map[string]int, node *Node) {
 	}
 }
 
+func puzzle01(dirSizes *map[string]int) int {
+	sum := 0
+
+	for _, size := range *dirSizes {
+		if size <= 100000 {
+			sum += size
+		}
+	}
+
+	return sum
+}
+
+func puzzle02(dirSizes *map[string]int) int {
+	total := 70000000
+	required := 30000000
+
+	unused := total - (*dirSizes)[""]
+	var smallest int
+
+	for _, size := range *dirSizes {
+		if size >= required-unused && (smallest == 0 || size < smallest) {
+			smallest = size
+		}
+	}
+
+	return smallest
+}
+
 func main() {
 	input, err := os.Open(os.Args[1])
 
@@ -103,13 +131,7 @@ func main() {
 	dirSizes := map[string]int{}
 	getDirSizes(&dirSizes, &fs)
 
-	sum := 0
+	fmt.Println(puzzle01(&dirSizes))
+	fmt.Println(puzzle02(&dirSizes))
 
-	for _, size := range dirSizes {
-		if size <= 100000 {
-			sum += size
-		}
-	}
-
-	fmt.Println(sum)
 }
