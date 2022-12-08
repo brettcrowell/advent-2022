@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Node struct {
@@ -15,56 +16,90 @@ type Node struct {
 	children []*Node
 }
 
-func createFsReader(fs *Node) func(string) {
+func find(name string, children ...*Node) *Node {
+	for _, child := range children {
+		if child.name == name {
+			return child
+		}
+	}
+	return nil
+}
+
+func mkdir(name string, parent *Node) Node {
+	return Node{
+		name:     name,
+		parent:   parent,
+		size:     0,
+		children: []*Node{},
+	}
+}
+
+func touch(name string, size int, parent *Node) Node {
+	return Node{
+		name:   name,
+		parent: parent,
+		size:   size,
+	}
+}
+
+func createFsReader(root *Node) func(string) {
 	cd, _ := regexp.Compile("\\$\\scd\\s(.*)")
 	resp, _ := regexp.Compile("(\\d+)\\s(.+)")
 
-	wd := fs
+	// keep a pointer to the working directory
+	wd := root
 
 	return func(line string) {
 		if cd.MatchString(line) {
-			parts := cd.FindAllStringSubmatch(line, -1)[0][1:]
-			arg := parts[0]
+			// the cmd argument is the first capture group
+			arg := cd.FindAllStringSubmatch(line, -1)[0][1:][0]
 
 			switch arg {
 			case "..":
+				// update the working directory to the parent
 				wd = wd.parent
 			default:
-				node := Node{
-					name:     arg,
-					parent:   wd,
-					size:     0,
-					children: []*Node{},
+				// check dir already exists
+				dir := find(arg, wd.children...)
+
+				if dir == nil {
+					// create a new empty dir
+					new := mkdir(arg, wd)
+					dir = &new
+
+					// create dir and add a pointer to the parent
+					wd.children = append(wd.children, dir)
 				}
 
-				wd.children = append(wd.children, &node)
-				wd = &node
+				// update the working directory pointer
+				wd = dir
 			}
 		}
 
 		if resp.MatchString(line) {
-			parts := resp.FindAllStringSubmatch(line, -1)[0][1:]
+			matches := resp.FindAllStringSubmatch(line, -1)[0][1:]
 
-			name := parts[1]
-			size, _ := strconv.Atoi(parts[0])
+			name := matches[1]
+			size, _ := strconv.Atoi(matches[0])
 
-			file := Node{
-				name:   name,
-				parent: wd,
-				size:   size,
-			}
+			// create a file with a pointer to the parent
+			file := touch(name, size, wd)
 
+			// append the child to the parent
 			wd.children = append(wd.children, &file)
 		}
 	}
 }
 
-func getAbsolutePath(node *Node) string {
+func getAbsolutePath(node *Node, path ...string) string {
 	if node.parent != nil {
-		return getAbsolutePath(node.parent) + "/" + node.name
+		return getAbsolutePath(
+			node.parent,
+			append([]string{node.name}, path...)...,
+		)
 	}
 
-	return node.name
+	return strings.Join(path, "/") + node.name
 }
 
 func getDirSizes(sizes *map[string]int, node *Node) {
@@ -72,7 +107,8 @@ func getDirSizes(sizes *map[string]int, node *Node) {
 		parent := node.parent
 
 		for parent != nil {
-			(*sizes)[getAbsolutePath(parent)] += node.size
+			path := getAbsolutePath(parent)
+			(*sizes)[path] += node.size
 			parent = parent.parent
 		}
 	}
@@ -120,7 +156,7 @@ func main() {
 	defer input.Close()
 	scanner := bufio.NewScanner(input)
 
-	fs := Node{}
+	var fs Node
 
 	read := createFsReader(&fs)
 
