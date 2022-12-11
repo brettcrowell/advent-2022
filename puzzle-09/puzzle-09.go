@@ -12,7 +12,6 @@ import (
 type instruction struct {
 	direction string
 	distance  int
-	axis      string
 }
 
 type location struct {
@@ -26,13 +25,7 @@ func createReader(steps *[]instruction) func(string) {
 		direction := parsed[0]
 		distance, _ := strconv.Atoi(parsed[1])
 
-		axis := "X"
-
-		if direction == "U" || direction == "D" {
-			axis = "Y"
-		}
-
-		instr := instruction{direction, distance, axis}
+		instr := instruction{direction, distance}
 		*steps = append(*steps, instr)
 	}
 }
@@ -68,15 +61,21 @@ func move(end location, instr instruction) location {
 	}
 }
 
-func render(head location, tail location) {
-	for r := 4; r >= 0; r-- {
+func render(knots [][]location) {
+	for r := 5; r >= 0; r-- {
 		line := ""
 		for c := 0; c < 6; c++ {
-			if head.x == c && head.y == r {
-				line = line + "H"
-			} else if tail.x == c && tail.y == r {
-				line = line + "T"
-			} else {
+			taken := false
+			for k, knot := range knots {
+				if !taken {
+					location := knot[len(knot)-1]
+					if location.x == c && location.y == r {
+						line = line + fmt.Sprint(k)
+						taken = true
+					}
+				}
+			}
+			if !taken {
 				line = line + "."
 			}
 		}
@@ -85,56 +84,91 @@ func render(head location, tail location) {
 	fmt.Println("")
 }
 
-func createApply(
-	heads *[]location,
-	tails *[]location,
-) func(instruction) {
-
+func createApply(knots *[][]location) func(instruction) {
+	iteration := 0
 	return func(instr instruction) {
-		head := (*heads)[len(*heads)-1]
-		tail := (*tails)[len(*tails)-1]
+		heads := (*knots)[0]
+		head := heads[len(heads)-1]
 
 		nextHead := move(head, instr)
-		nextTail := tail
+		(*knots)[0] = append(heads, nextHead)
 
-		xDistance := math.Max(float64(nextHead.x), float64(tail.x)) -
-			math.Min(float64(nextHead.x), float64(tail.x))
+		for t, trail := range (*knots)[1:] {
+			prevPosns := (*knots)[t]
+			prev := prevPosns[len(prevPosns)-1]
 
-		yDistance := math.Max(float64(nextHead.y), float64(tail.y)) -
-			math.Min(float64(nextHead.y), float64(tail.y))
+			curPosns := trail[len(trail)-1]
+			cur := curPosns
 
-		if xDistance != yDistance && xDistance+yDistance > 1 {
-			if xDistance > 0 {
-				nextTail = location{head.x, nextTail.y}
+			xDistance := math.Max(float64(prev.x), float64(cur.x)) -
+				math.Min(float64(prev.x), float64(cur.x))
+
+			yDistance := math.Max(float64(prev.y), float64(cur.y)) -
+				math.Min(float64(prev.y), float64(cur.y))
+
+			if xDistance > 1 || yDistance > 1 {
+				if xDistance > 0 {
+					if prev.x > cur.x {
+						cur = move(cur, instruction{"R", 1})
+					} else {
+						cur = move(cur, instruction{"L", 1})
+					}
+				}
+
+				if yDistance > 0 {
+					if prev.y > cur.y {
+						cur = move(cur, instruction{"U", 1})
+					} else {
+						cur = move(cur, instruction{"D", 1})
+					}
+				}
 			}
 
-			if yDistance > 0 {
-				nextTail = location{nextTail.x, head.y}
-			}
+			(*knots)[t+1] = append((*knots)[t+1], cur)
 		}
-
-		*heads = append(*heads, nextHead)
-		*tails = append(*tails, nextTail)
-
-		fmt.Println("x", xDistance, "y", yDistance)
-		render(nextHead, nextTail)
+		iteration++
 	}
 }
 
 func puzzle01(instructions *[]instruction) int {
-	head := []location{{x: 0, y: 0}}
-	tail := []location{{x: 0, y: 0}}
+	knots := [][]location{
+		{{x: 0, y: 0}},
+		{{x: 0, y: 0}},
+	}
 
-	apply := createApply(&head, &tail)
+	apply := createApply(&knots)
 
 	for _, instr := range *instructions {
 		for i := 0; i < instr.distance; i++ {
 			// apply instructions one unit at a time
-			apply(instruction{instr.direction, 1, instr.axis})
+			apply(instruction{instr.direction, 1})
 		}
 	}
 
-	return len(dedup(tail))
+	return len(dedup(knots[len(knots)-1]))
+}
+
+func puzzle02(instructions *[]instruction) int {
+	knots := [][]location{}
+
+	for len(knots) < 10 {
+		knots = append(knots, []location{{x: 0, y: 0}})
+	}
+
+	apply := createApply(&knots)
+
+	for _, instr := range *instructions {
+		fmt.Println("==", instr.direction, instr.distance, "==")
+		for i := 0; i < instr.distance; i++ {
+			// apply instructions one unit at a time
+			apply(instruction{instr.direction, 1})
+			render(knots)
+		}
+	}
+
+	tailPosns := knots[len(knots)-1]
+
+	return len(dedup(tailPosns))
 }
 
 func main() {
@@ -154,6 +188,6 @@ func main() {
 		read(scanner.Text())
 	}
 
-	fmt.Println(moves)
 	fmt.Println(puzzle01(&moves))
+	fmt.Println(puzzle02(&moves))
 }
