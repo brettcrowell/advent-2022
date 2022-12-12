@@ -30,16 +30,35 @@ func (monkey *Monkey) operation(old int) int {
 
 	switch monkey.operator {
 	case "+":
-		return old + value
+		{
+			new := old + value
+			fmt.Println("    Worry level is increased by", value, "to", new)
+			return new
+		}
 	case "*":
-		return old * value
+		{
+			new := old * value
+			fmt.Println("    Worry level is multiplied by", value, "to", new)
+			return new
+		}
 	}
 
 	panic("unrecognized operator")
 }
 
 func (monkey *Monkey) test(worryLevel int) int {
-	if worryLevel%monkey.modulo == 0 {
+	remainder := worryLevel % monkey.modulo
+	divisible := remainder == 0
+
+	adjective := "is"
+
+	if !divisible {
+		adjective = "isnt"
+	}
+
+	fmt.Println("    Current worry level", adjective, "divisble by", monkey.modulo)
+
+	if remainder == 0 {
 		return monkey.pass
 	}
 	return monkey.fail
@@ -49,28 +68,30 @@ func (monkey *Monkey) catch(item int) {
 	monkey.items = append(monkey.items, item)
 }
 
-func (monkey *Monkey) throw(to *Monkey, item int) {
-	to.catch(item)
+func (monkey *Monkey) throw(to *Monkey, item int, divisor int) {
+	to.catch(item % divisor)
 	monkey.items = monkey.items[1:]
 }
 
-func (monkey *Monkey) inspect(monkeys []*Monkey) {
+func (monkey *Monkey) inspect(
+	monkeys []*Monkey,
+	worryFactor int,
+	divisor int,
+) {
 	monkey.inspections++
 
 	item := monkey.items[0]
 	fmt.Println("  Monkey inspects an item with a worry level of", item)
 
 	worry := monkey.operation(item)
-	fmt.Println("    Worry level is multiplied by", monkey.value, "to", worry)
 
-	worry /= 3
-	fmt.Println("    Monkey gets bored with item. Worry level is divided by 3 to", worry)
+	worry /= worryFactor
+	fmt.Println("    Monkey gets bored with item. Worry level is divided by", worryFactor, "to", worry)
 
 	passTo := monkey.test(worry)
-	fmt.Println("    Current worry level is|isnt divisble by", monkey.modulo)
 
 	passToMonkey := monkeys[passTo]
-	monkey.throw(passToMonkey, worry)
+	monkey.throw(passToMonkey, worry, divisor)
 	fmt.Println("    item with worry level", worry, "passed to monkey", passTo)
 }
 
@@ -80,7 +101,36 @@ func puzzle01(monkeys []*Monkey) int {
 		for m, monkey := range monkeys {
 			fmt.Println("Monkey ", m)
 			for range monkey.items {
-				monkey.inspect(monkeys)
+				monkey.inspect(monkeys, 3, 1)
+			}
+		}
+	}
+
+	inspections := []int{}
+
+	for m, monkey := range monkeys {
+		fmt.Println("Monkey", m, "inspected", monkey.inspections, "items")
+		inspections = append(inspections, monkey.inspections)
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(inspections)))
+
+	return inspections[0] * inspections[1]
+}
+
+func puzzle02(monkeys []*Monkey) int {
+	// inspired/stolen from @gamache
+	divisor := 1
+	for _, monkey := range monkeys {
+		divisor *= int(monkey.modulo)
+	}
+
+	for round := 0; round < 10000; round++ {
+		fmt.Println("==", round, "==")
+		for m, monkey := range monkeys {
+			fmt.Println("Monkey ", m)
+			for range monkey.items {
+				monkey.inspect(monkeys, 1, divisor)
 			}
 		}
 	}
@@ -197,6 +247,7 @@ func main() {
 		iter++
 	}
 
-	fmt.Println(puzzle01(monkeys))
+	// fmt.Println(puzzle01(monkeys))
+	fmt.Println(puzzle02(monkeys))
 
 }
