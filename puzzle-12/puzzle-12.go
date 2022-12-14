@@ -4,19 +4,32 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
-type Square struct {
+type Node struct {
 	x      int
 	y      int
 	label  string
 	height int
 }
 
-type Path []*Square
+type Nodes []*Node
 
-func includes(path *Path, node *Square) int {
+func (n Nodes) Len() int {
+	return len(n)
+}
+
+func (n Nodes) Swap(i, j int) {
+	n[i], n[j] = n[j], n[i]
+}
+
+func (n Nodes) Less(i, j int) bool {
+	return (*n[j]).height < (*n[i]).height
+}
+
+func includes(path *Nodes, node *Node) int {
 	for s, square := range *path {
 		if node == square {
 			return s
@@ -25,21 +38,30 @@ func includes(path *Path, node *Square) int {
 	return -1
 }
 
-func render(grid *[][]*Square, path *Path) {
+func render(grid *[][]*Node, path *Nodes) {
+	output := ""
 	for _, row := range *grid {
 		for _, col := range row {
 			move := includes(path, col)
 			if move > -1 {
-				fmt.Print(move % 10)
+				output += col.label
 			} else {
-				fmt.Print(col.label)
+				switch col.label {
+				case "S":
+					output += "S"
+				case "E":
+					output += "E"
+				default:
+					output += "."
+				}
 			}
 		}
-		fmt.Println()
+		output += "\n"
 	}
+	fmt.Print("\033[" + fmt.Sprint(len(*grid)+1) + "A" + output)
 }
 
-func hasVisited(path *Path, target *Square) bool {
+func hasVisited(path *Nodes, target *Node) bool {
 	for _, square := range *path {
 		if square == target {
 			return true
@@ -48,15 +70,8 @@ func hasVisited(path *Path, target *Square) bool {
 	return false
 }
 
-func isValid(path *Path, target *Square, neighbor *Square) bool {
-	gap := neighbor.height - (*target).height
-	visited := hasVisited(path, neighbor)
-
-	return gap < 2 && !visited
-}
-
-func getNeighbors(grid *[][]*Square, square *Square) []*Square {
-	neighbors := []*Square{}
+func getNeighbors(grid *[][]*Node, square *Node) Nodes {
+	neighbors := Nodes{}
 
 	if square.y < len(*grid)-1 {
 		// down
@@ -81,68 +96,94 @@ func getNeighbors(grid *[][]*Square, square *Square) []*Square {
 	return neighbors
 }
 
-func getValid(
-	path *Path,
-	neighbors *[]*Square,
-	target *Square,
-) []*Square {
-	valid := []*Square{}
+func filterValid(visited *map[*Node]bool, neighbors *Nodes, target *Node) Nodes {
+	valid := Nodes{}
+
 	for _, neighbor := range *neighbors {
-		if isValid(path, target, neighbor) {
+		gap := neighbor.height - (*target).height
+		hasVisited := (*visited)[neighbor]
+
+		isValid := gap < 2 && !hasVisited
+
+		if isValid {
 			valid = append(valid, neighbor)
 		}
 	}
+
 	return valid
 }
 
 func getPath(
-	grid *[][]*Square,
-	start *Square,
+	grid *[][]*Node,
+	start *Node,
 	destination string,
-) Path {
+) Nodes {
 
-	// keep track of all of the visited nodes
-	visited := Path{}
+	visited := map[*Node]bool{}
+
+	// keep track of the path
+	path := Nodes{}
 
 	next := start
 
 	for next != nil {
-		fmt.Println(next.x, next.y)
+
+		// if we've never been here, add it to the list
+		visited[next] = true
 
 		// get all adjacent squares
 		neighbors := getNeighbors(grid, next)
 
 		// filter down to squares which are reachable
-		valid := getValid(&visited, &neighbors, next)
-
-		if valid[0].label == destination {
-			// if we're at our destination, return
-			break
-		}
+		valid := filterValid(&visited, &neighbors, next)
 
 		if len(valid) == 0 {
-			// if no valid edges, go back one step and try again
-			next = visited[len(visited)-1]
-
 			if next == start {
-				// if we have exhausted all edges from the start
+				// if we're back at the start with no valid neighbors
+				// we have nowhere to go!
 				break
 			}
+
+			visited[path[len(path)-1]] = false
+
+			// roll back the last node
+			path = path[:len(path)-1]
+
+			// if no valid edges, go back one step and try again
+			next = path[len(path)-1]
 
 			continue
 		}
 
+		// keep appending to path
+		path = append(path, next)
+
+		if valid[0].label == destination {
+			// if we're at our destination, return
+			return path
+		}
+
+		// sort reachable nodes by distance
+		sort.Sort(Nodes(valid))
+
 		// check the next valid node
 		next = valid[0]
-		visited = append(visited, next)
 	}
 
-	return visited
+	panic("No path found between nodes")
 }
 
-func puzzle01(squares *[]Square, grid *[][]*Square) int {
-	square := (*squares)[0]
-	path := getPath(grid, &square, "E")
+func puzzle01(nodes *[]Node, grid *[][]*Node) int {
+	var start *Node
+
+	for _, node := range *nodes {
+		if node.label == "S" {
+			start = &node
+			break
+		}
+	}
+
+	path := getPath(grid, start, "E")
 
 	render(grid, &path)
 
@@ -159,26 +200,30 @@ func main() {
 	defer input.Close()
 	scanner := bufio.NewScanner(input)
 
-	heights := map[string]int{"S": -1}
+	heights := map[string]int{}
 
 	for c, char := range strings.Split("abcdefghijklmnopqrstuvwxyzE", "") {
 		heights[char] = c
 	}
 
-	squares := []Square{}
-	grid := [][]*Square{}
+	heights["S"] = heights["a"]
+	heights["E"] = heights["z"]
+
+	squares := []Node{}
+	grid := [][]*Node{}
 
 	r := 0
 	for scanner.Scan() {
-		currentRow := []*Square{}
+		currentRow := []*Node{}
 		for c, col := range strings.Split(scanner.Text(), "") {
 			height := heights[col]
-			squares = append(squares, Square{c, r, col, height})
+			squares = append(squares, Node{c, r, col, height})
 			currentRow = append(currentRow, &squares[len(squares)-1])
 		}
 		grid = append(grid, currentRow)
 		r++
 	}
 
+	// render(&grid, &Nodes{})
 	fmt.Println(puzzle01(&squares, &grid))
 }
