@@ -14,11 +14,9 @@ type Square struct {
 	height int
 }
 
-type Position struct {
-	square *Square
-}
+type Path []*Square
 
-func includes(path *[]*Square, node *Square) int {
+func includes(path *Path, node *Square) int {
 	for s, square := range *path {
 		if node == square {
 			return s
@@ -27,7 +25,7 @@ func includes(path *[]*Square, node *Square) int {
 	return -1
 }
 
-func render(grid *[][]*Square, path *[]*Square) {
+func render(grid *[][]*Square, path *Path) {
 	for _, row := range *grid {
 		for _, col := range row {
 			move := includes(path, col)
@@ -41,7 +39,7 @@ func render(grid *[][]*Square, path *[]*Square) {
 	}
 }
 
-func hasVisited(path *[]*Square, target *Square) bool {
+func hasVisited(path *Path, target *Square) bool {
 	for _, square := range *path {
 		if square == target {
 			return true
@@ -50,7 +48,7 @@ func hasVisited(path *[]*Square, target *Square) bool {
 	return false
 }
 
-func isValid(path *[]*Square, target *Square, neighbor *Square) bool {
+func isValid(path *Path, target *Square, neighbor *Square) bool {
 	gap := neighbor.height - (*target).height
 	visited := hasVisited(path, neighbor)
 
@@ -84,7 +82,7 @@ func getNeighbors(grid *[][]*Square, square *Square) []*Square {
 }
 
 func getValid(
-	path *[]*Square,
+	path *Path,
 	neighbors *[]*Square,
 	target *Square,
 ) []*Square {
@@ -101,10 +99,10 @@ func getPath(
 	grid *[][]*Square,
 	start *Square,
 	destination string,
-) []*Square {
+) Path {
 
 	// keep track of all of the visited nodes
-	visited := []*Square{}
+	visited := Path{}
 
 	next := start
 
