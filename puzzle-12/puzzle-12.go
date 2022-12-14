@@ -12,17 +12,30 @@ type Square struct {
 	y      int
 	label  string
 	height int
-	target bool
 }
 
 type Position struct {
 	square *Square
 }
 
-func render(grid *[][]*Square) {
+func includes(path *[]*Square, node *Square) int {
+	for s, square := range *path {
+		if node == square {
+			return s
+		}
+	}
+	return -1
+}
+
+func render(grid *[][]*Square, path *[]*Square) {
 	for _, row := range *grid {
 		for _, col := range row {
-			fmt.Print(col.label)
+			move := includes(path, col)
+			if move > -1 {
+				fmt.Print(move % 10)
+			} else {
+				fmt.Print(col.label)
+			}
 		}
 		fmt.Println()
 	}
@@ -84,52 +97,58 @@ func getValid(
 	return valid
 }
 
-func step(grid *[][]*Square, target *Square) []*Square {
-	path := []*Square{}
-	next := target
+func getPath(
+	grid *[][]*Square,
+	start *Square,
+	destination string,
+) []*Square {
+
+	// keep track of all of the visited nodes
+	visited := []*Square{}
+
+	next := start
 
 	for next != nil {
-		fmt.Println(next.x, next.y, next.label)
+		fmt.Println(next.x, next.y)
 
+		// get all adjacent squares
 		neighbors := getNeighbors(grid, next)
-		valid := getValid(&path, &neighbors, next)
 
-		fmt.Println("neighbors")
-		for _, neighbor := range valid {
-			fmt.Println(neighbor.x, neighbor.y, neighbor.label)
+		// filter down to squares which are reachable
+		valid := getValid(&visited, &neighbors, next)
+
+		if valid[0].label == destination {
+			// if we're at our destination, return
+			break
 		}
-		fmt.Println("/neighbors")
 
 		if len(valid) == 0 {
-			break
+			// if no valid edges, go back one step and try again
+			next = visited[len(visited)-1]
+
+			if next == start {
+				// if we have exhausted all edges from the start
+				break
+			}
+
+			continue
 		}
 
-		if valid[0].target {
-			break
-		}
-
+		// check the next valid node
 		next = valid[0]
-		path = append(path, next)
+		visited = append(visited, next)
 	}
 
-	fmt.Println(len(path))
-
-	return path
-
-	// if (*target).target {
-	// 	return []*Square{}
-	// }
-
-	// return append(step(grid, neighbors[0]), target)
+	return visited
 }
 
 func puzzle01(squares *[]Square, grid *[][]*Square) int {
 	square := (*squares)[0]
-	path := step(grid, &square)
+	path := getPath(grid, &square, "E")
 
-	fmt.Println(path)
+	render(grid, &path)
 
-	return 0
+	return len(path)
 }
 
 func main() {
@@ -156,13 +175,12 @@ func main() {
 		currentRow := []*Square{}
 		for c, col := range strings.Split(scanner.Text(), "") {
 			height := heights[col]
-			squares = append(squares, Square{c, r, col, height, col == "E"})
+			squares = append(squares, Square{c, r, col, height})
 			currentRow = append(currentRow, &squares[len(squares)-1])
 		}
 		grid = append(grid, currentRow)
 		r++
 	}
 
-	render(&grid)
 	fmt.Println(puzzle01(&squares, &grid))
 }
