@@ -91,7 +91,6 @@ func getShortestPath(
 
 	for node := range graph {
 		distances[node] = math.Inf(1)
-		visited[node] = false
 	}
 
 	// seed distances map with starting node
@@ -100,7 +99,7 @@ func getShortestPath(
 	// keep track of the closest neighbor for each node
 	preceding := map[*Node]*Node{}
 
-	for range graph {
+	for len(visited) < len(graph) {
 		distance := math.Inf(1)
 
 		// get next unprocessed node, initially will equal start
@@ -116,8 +115,16 @@ func getShortestPath(
 			}
 		}
 
+		if next == nil {
+			return []*Node{}
+		}
+
 		// update the node to visited
 		visited[next] = true
+
+		if visited[destination] {
+			break
+		}
 
 		for _, neighbor := range graph[next] {
 			// the distance to this neighbor following a path through "closest" node
@@ -175,6 +182,42 @@ func puzzle01(grid [][]*Node, graph map[*Node][]*Node) int {
 	return len(path)
 }
 
+func puzzle02(grid [][]*Node, graph map[*Node][]*Node) int {
+	starts := []*Node{}
+	var end *Node
+
+	for node := range graph {
+		switch (*node).label {
+		case "a":
+			{
+				starts = append(starts, node)
+				break
+			}
+
+		case "E":
+			{
+				end = node
+				break
+			}
+		}
+	}
+
+	var shortest []*Node
+	length := math.MaxInt
+
+	for _, start := range starts {
+		path := getShortestPath(graph, start, end)
+		if len(path) > 0 && len(path) < length {
+			length = len(path)
+			shortest = path
+		}
+	}
+
+	render(grid, shortest)
+
+	return len(shortest)
+}
+
 func main() {
 	input, err := os.Open(os.Args[1])
 
@@ -223,6 +266,6 @@ func main() {
 		}
 	}
 
-	// render(&grid, &Nodes{})
 	fmt.Println(puzzle01(grid, graph))
+	fmt.Println(puzzle02(grid, graph))
 }
